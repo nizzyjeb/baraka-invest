@@ -21,8 +21,8 @@ button,input,select{font-family:inherit}
 header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
   padding:16px 26px; background:var(--ink); color:#F4F2EC; position:sticky; top:0; z-index:20}
 .brand{display:flex; align-items:center; gap:13px}
-.mark{width:42px; height:42px; border-radius:10px; display:grid; place-items:center;
-  background:var(--brass); color:var(--ink); font-size:24px; font-weight:700; font-family:'Fraunces',serif}
+.mark{width:44px; height:44px; border-radius:10px; background:#fff; object-fit:contain; padding:2px;
+  box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .bname{font-family:'Fraunces',serif; font-weight:600; font-size:18px; letter-spacing:.2px}
 .bsub{font-size:12px; color:#A9BBB2; margin-top:1px}
 nav{display:flex; gap:4px; flex-wrap:wrap}
@@ -166,8 +166,7 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
   display:flex; align-items:center; justify-content:center; padding:24px}
 .gate-card{background:var(--card); border-radius:18px; padding:34px 30px; width:100%; max-width:380px;
   box-shadow:0 24px 60px rgba(0,0,0,.35)}
-.gate-mark{width:54px; height:54px; border-radius:13px; display:grid; place-items:center; margin:0 auto 14px;
-  background:var(--brass); color:var(--ink); font-size:30px; font-weight:700; font-family:'Fraunces',serif}
+.gate-logo{display:block; width:230px; max-width:82%; height:auto; margin:2px auto 16px}
 .gate-card h1{font-family:'Fraunces',serif; font-weight:600; font-size:22px; text-align:center}
 .gate-card .gate-sub{text-align:center; color:var(--muted); font-size:13px; margin:4px 0 22px}
 .gate-card label{display:block; font-size:12px; font-weight:600; color:var(--ink-2); margin-bottom:6px; margin-top:14px}
@@ -188,8 +187,7 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
 <!-- Écran de connexion -->
 <div id="gate">
   <form class="gate-card" id="gate-form" autocomplete="on">
-    <div class="gate-mark">ب</div>
-    <h1>BARAKA INVEST HOLDING</h1>
+    <img class="gate-logo" src="logo.jpg" alt="Baraka Invest Holding">
     <div class="gate-sub">Factures &amp; dépenses · Accès sécurisé</div>
     <label for="g-email">Adresse e-mail</label>
     <input type="email" id="g-email" required autocomplete="username" placeholder="vous@exemple.com">
@@ -202,7 +200,7 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
 
 <header class="hidden" id="app-header">
   <div class="brand">
-    <span class="mark">ب</span>
+    <img class="mark" src="logo.jpg" alt="Baraka Invest Holding">
     <div>
       <div class="bname" id="hdr-name">BARAKA INVEST HOLDING</div>
       <div class="bsub">Factures &amp; dépenses · FCFA</div>
