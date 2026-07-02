@@ -199,6 +199,8 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
 .signout{background:rgba(255,255,255,.08); border:none; color:#F4F2EC; padding:7px 12px; border-radius:8px;
   font-size:13px; cursor:pointer; font-weight:500}
 .signout:hover{background:rgba(255,255,255,.16)}
+.hdr-role{background:var(--brass); color:var(--ink); font-size:12px; font-weight:600;
+  padding:3px 9px; border-radius:6px}
 </style>
 </head>
 <body>
@@ -225,7 +227,7 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
     </div>
   </div>
   <nav id="nav"></nav>
-  <div class="hdr-user"><span id="hdr-email"></span><button class="signout" id="hdr-signout">Déconnexion</button></div>
+  <div class="hdr-user"><span id="hdr-role" class="hdr-role"></span><span id="hdr-email"></span><button class="signout" id="hdr-signout">Déconnexion</button></div>
 </header>
 <main class="hidden" id="app-main"><div id="view"></div></main>
 
@@ -280,9 +282,12 @@ function entryFromRow(r){
 function loadAll(){
   return Promise.all([
     sb.from("entries").select("*").order("date",{ascending:false}),
-    sb.from("config").select("*").eq("id",CONFIG_ID).maybeSingle()
+    sb.from("config").select("*").eq("id",CONFIG_ID).maybeSingle(),
+    sb.from("profiles").select("role").maybeSingle()
   ]).then(function(res){
-    var ent=res[0], cfg=res[1];
+    var ent=res[0], cfg=res[1], prof=res[2];
+    S.role = (prof && prof.data && prof.data.role) ? prof.data.role : "invite";
+    S.isAdmin = (S.role === "admin");
     if(ent.error) throw ent.error;
     S.entries = (ent.data||[]).map(entryFromRow);
     if(cfg.error) throw cfg.error;
@@ -360,6 +365,9 @@ function persistSettings(){sbSaveConfig();}
 /* ---------- Navigation ---------- */
 function renderNav(){
   var items=[["dashboard","Tableau de bord"],["saisie",S.editId?"Modifier":"Saisie"],["ecritures","Écritures"],["factures","Factures"],["params","Paramètres"]];
+  if(!S.isAdmin){ /* invité : consultation seule */
+    items=items.filter(function(it){return it[0]!=="saisie"&&it[0]!=="params";});
+  }
   var nav=document.getElementById("nav"); nav.innerHTML="";
   items.forEach(function(it){
     var b=document.createElement("button");
@@ -369,6 +377,8 @@ function renderNav(){
     nav.appendChild(b);
   });
   document.getElementById("hdr-name").textContent=S.settings.raisonSociale||"BARAKA INVEST HOLDING";
+  var re=document.getElementById("hdr-role");
+  if(re) re.textContent = S.isAdmin ? "Admin" : "Invité (consultation)";
 }
 function go(tab){ S.tab=tab; render(); }
 function render(){ renderNav(); var v=document.getElementById("view");
@@ -383,9 +393,9 @@ function render(){ renderNav(); var v=document.getElementById("view");
 function renderDashboard(v){
   if(S.entries.length===0){
     v.innerHTML='<div class="empty-state"><h2>Aucune écriture pour l’instant</h2>'+
-      '<p>Commencez par enregistrer une facture fournisseur ou une dépense.</p>'+
-      '<button class="btn-primary" id="d-new">Nouvelle écriture</button></div>';
-    document.getElementById("d-new").onclick=function(){S.editId=null;go("saisie");};
+      '<p>'+(S.isAdmin?"Commencez par enregistrer une facture fournisseur ou une dépense.":"Aucune donnée à consulter pour le moment.")+'</p>'+
+      (S.isAdmin?'<button class="btn-primary" id="d-new">Nouvelle écriture</button>':'')+'</div>';
+    if(S.isAdmin) document.getElementById("d-new").onclick=function(){S.editId=null;go("saisie");};
     return;
   }
   var months={}; S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
@@ -427,13 +437,15 @@ function renderDashboard(v){
   v.innerHTML=html;
 
   document.getElementById("d-month").onchange=function(){S.dashMonth=this.value;renderDashboard(v);};
-  Array.prototype.forEach.call(v.querySelectorAll(".recent-row"),function(b){
+  if(S.isAdmin) Array.prototype.forEach.call(v.querySelectorAll(".recent-row"),function(b){
     b.onclick=function(){S.editId=b.getAttribute("data-id");go("saisie");};});
 }
 function kpi(label,val,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div></div>';}
 
 /* ---------- Saisie ---------- */
 function renderSaisie(v){
+  if(!S.isAdmin){ v.innerHTML='<div class="empty-state"><h2>Accès en consultation</h2>'+
+    '<p>Votre profil « Invité » permet uniquement de consulter les données.</p></div>'; return; }
   var editing=null; if(S.editId)editing=S.entries.filter(function(x){return x.id===S.editId;})[0]||null;
   var d=editing?Object.assign({},editing):{type:"facture",date:todayISO(),piece:"",tiers:"",
     category:(S.categories[0]||"Autres"),montantHT:"",tva:true,css:true,mode:MODES[0],statut:"apayer",note:""};
@@ -629,8 +641,8 @@ function renderEcritures(v){
         '<td><span class="chip '+(e.statut==="paye"?"ok":"wait")+'">'+(e.statut==="paye"?"Payé":"À payer")+'</span></td>'+
         '<td class="rowact">'+
         (e.attach?'<button class="rowbtn-att" data-att="'+e.attach.id+'" title="Voir la facture jointe">Aperçu</button>':'')+
-        '<button data-edit="'+e.id+'" title="Modifier">✎</button>'+
-        '<button data-del="'+e.id+'" title="Supprimer">🗑</button></td></tr>';
+        (S.isAdmin?'<button data-edit="'+e.id+'" title="Modifier">✎</button>'+
+        '<button data-del="'+e.id+'" title="Supprimer">🗑</button>':'')+'</td></tr>';
     }).join("");
     var tot=rows.reduce(function(a,e){var c=computeLine(e);a.ht+=c.ht;a.tva+=c.tva;a.css+=c.css;a.ttc+=c.ttc;return a;},{ht:0,tva:0,css:0,ttc:0});
     foot.innerHTML='<tr><td colspan="3">Total ('+rows.length+')</td>'+
