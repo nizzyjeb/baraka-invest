@@ -161,6 +161,24 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
 .empty-state h2{color:var(--ink); margin-bottom:8px}
 .empty-state p{margin-bottom:20px}
 
+/* Bouton Aperçu (ligne d'écriture) */
+.rowbtn-att{background:var(--brass); color:var(--ink); border:none; border-radius:7px;
+  padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; margin-right:6px}
+.rowbtn-att:hover{background:var(--brass-d); color:#fff}
+
+/* Galerie Factures */
+.fac-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:16px}
+.fac-card{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  display:flex; flex-direction:column}
+.fac-thumb{height:150px; background:#EFEBE0; display:grid; place-items:center; cursor:pointer; overflow:hidden}
+.fac-thumb img{width:100%; height:100%; object-fit:cover}
+.fac-pdf{font-family:'Fraunces',serif; font-weight:600; color:var(--brass); font-size:24px; letter-spacing:2px}
+.fac-meta{padding:12px 14px; display:flex; flex-direction:column; gap:4px}
+.fac-tiers{font-weight:600; font-size:14px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.fac-sub{font-size:12px; color:var(--muted)}
+.fac-amt{font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; margin:2px 0 8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.fac-open{align-self:flex-start}
+
 /* ---- Connexion (cloud) ---- */
 #gate{position:fixed; inset:0; z-index:100; background:var(--ink);
   display:flex; align-items:center; justify-content:center; padding:24px}
@@ -341,7 +359,7 @@ function persistSettings(){sbSaveConfig();}
 
 /* ---------- Navigation ---------- */
 function renderNav(){
-  var items=[["dashboard","Tableau de bord"],["saisie",S.editId?"Modifier":"Saisie"],["ecritures","Écritures"],["params","Paramètres"]];
+  var items=[["dashboard","Tableau de bord"],["saisie",S.editId?"Modifier":"Saisie"],["ecritures","Écritures"],["factures","Factures"],["params","Paramètres"]];
   var nav=document.getElementById("nav"); nav.innerHTML="";
   items.forEach(function(it){
     var b=document.createElement("button");
@@ -357,6 +375,7 @@ function render(){ renderNav(); var v=document.getElementById("view");
   if(S.tab==="dashboard")renderDashboard(v);
   else if(S.tab==="saisie")renderSaisie(v);
   else if(S.tab==="ecritures")renderEcritures(v);
+  else if(S.tab==="factures")renderFactures(v);
   else renderParams(v);
 }
 
@@ -609,7 +628,7 @@ function renderEcritures(v){
         '<td class="num strong">'+fcfa(c.ttc)+'</td>'+
         '<td><span class="chip '+(e.statut==="paye"?"ok":"wait")+'">'+(e.statut==="paye"?"Payé":"À payer")+'</span></td>'+
         '<td class="rowact">'+
-        (e.attach?'<button data-att="'+e.attach.id+'" title="Voir la facture jointe">📎</button>':'')+
+        (e.attach?'<button class="rowbtn-att" data-att="'+e.attach.id+'" title="Voir la facture jointe">Aperçu</button>':'')+
         '<button data-edit="'+e.id+'" title="Modifier">✎</button>'+
         '<button data-del="'+e.id+'" title="Supprimer">🗑</button></td></tr>';
     }).join("");
@@ -637,6 +656,39 @@ function renderEcritures(v){
   mEl.onchange=function(){f.month=this.value;drawRows();};
   document.getElementById("ec-export").onclick=function(){exportCSV(filtered());};
   drawRows();
+}
+
+/* ---------- Factures (galerie des pièces jointes) ---------- */
+function renderFactures(v){
+  var list=S.entries.filter(function(e){return e.attach&&e.attach.id;})
+    .sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  var html='<div class="page-head"><h2>Factures <span class="count">'+list.length+'</span></h2></div>';
+  if(list.length===0){
+    v.innerHTML=html+'<div class="empty-state"><h2>Aucune facture scannée</h2>'+
+      '<p>Joignez un scan (PDF ou image) à une écriture depuis la saisie : il apparaîtra ici.</p></div>';
+    return;
+  }
+  html+='<div class="fac-grid">'+list.map(function(e){
+    var c=computeLine(e);
+    var isImg=((e.attach.type||"").indexOf("image")===0);
+    return '<div class="fac-card">'+
+      '<div class="fac-thumb" data-att="'+e.attach.id+'" title="Ouvrir la facture">'+
+        (isImg?'<img data-imgid="'+e.attach.id+'" alt="'+esc(e.attach.name)+'">':'<div class="fac-pdf">PDF</div>')+
+      '</div>'+
+      '<div class="fac-meta">'+
+        '<div class="fac-tiers">'+esc(e.tiers||"—")+'</div>'+
+        '<div class="fac-sub">'+esc(e.date||"")+(e.piece?" · "+esc(e.piece):"")+'</div>'+
+        '<div class="fac-amt">'+fcfa(c.ttc)+' <span class="chip '+(e.statut==="paye"?"ok":"wait")+'">'+(e.statut==="paye"?"Payé":"À payer")+'</span></div>'+
+        '<button class="btn-ghost fac-open" data-att="'+e.attach.id+'">Ouvrir</button>'+
+      '</div></div>';
+  }).join("")+'</div>';
+  v.innerHTML=html;
+  v.querySelectorAll("[data-att]").forEach(function(b){b.onclick=function(){openAttach(b.getAttribute("data-att"));};});
+  v.querySelectorAll("img[data-imgid]").forEach(function(img){
+    sb.storage.from(STORAGE_BUCKET).createSignedUrl(img.getAttribute("data-imgid"),3600).then(function(r){
+      if(r.data&&r.data.signedUrl)img.src=r.data.signedUrl;
+    }).catch(function(){});
+  });
 }
 function exportCSV(rows){
   if(!rows.length){alert("Aucune écriture à exporter.");return;}
