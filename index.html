@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baraka Invest Holding — Factures &amp; dépenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --ink:#14302B; --ink-2:#22433c; --brass:#B0843A; --brass-d:#8a6628;
+  --paper:#F4F2EC; --card:#FFFFFF; --line:#E4DFD3; --muted:#6E7A72;
+  --ok:#2C6E52; --wait:#A35A2E; --blue:#3A6B8C;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{font-family:'Inter',system-ui,sans-serif; color:var(--ink); background:var(--paper);
+  min-height:100vh; -webkit-font-smoothing:antialiased}
+button,input,select{font-family:inherit}
+.hidden{display:none !important}
+
+header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
+  padding:16px 26px; background:var(--ink); color:#F4F2EC; position:sticky; top:0; z-index:20}
+.brand{display:flex; align-items:center; gap:13px}
+.mark{width:42px; height:42px; border-radius:10px; display:grid; place-items:center;
+  background:var(--brass); color:var(--ink); font-size:24px; font-weight:700; font-family:'Fraunces',serif}
+.bname{font-family:'Fraunces',serif; font-weight:600; font-size:18px; letter-spacing:.2px}
+.bsub{font-size:12px; color:#A9BBB2; margin-top:1px}
+nav{display:flex; gap:4px; flex-wrap:wrap}
+.tab{background:transparent; border:none; color:#BFD0C7; padding:8px 14px; border-radius:8px;
+  font-size:14px; font-weight:500; cursor:pointer}
+.tab:hover{color:#fff; background:rgba(255,255,255,.07)}
+.tab.on{color:var(--ink); background:var(--brass)}
+
+main{max-width:1080px; margin:0 auto; padding:28px 22px 60px}
+.narrow{max-width:680px; margin:0 auto}
+.page-head{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px}
+h2{font-family:'Fraunces',serif; font-weight:600; font-size:26px}
+h3{font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin-bottom:14px}
+.count{font-family:'Inter'; font-size:14px; color:var(--muted); font-weight:500}
+.muted{color:var(--muted); font-size:14px}
+.center{text-align:center}
+
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:12px; margin-bottom:22px}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px}
+.kpi.accent{background:var(--ink); border-color:var(--ink)}
+.kpi.accent .kpi-label{color:#A9BBB2}
+.kpi.accent .kpi-value{color:#fff}
+.kpi.warn .kpi-value{color:var(--wait)}
+.kpi-label{font-size:12px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.4px}
+.kpi-value{font-size:21px; font-weight:600; margin-top:7px; font-variant-numeric:tabular-nums}
+
+.grid2{display:grid; grid-template-columns:1.15fr .85fr; gap:16px}
+@media(max-width:780px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px}
+
+.bars{display:flex; flex-direction:column; gap:12px}
+.bar-row{display:grid; grid-template-columns:130px 1fr auto; align-items:center; gap:12px}
+.bar-label{font-size:13px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bar-track{height:9px; background:#EFEBE0; border-radius:6px; overflow:hidden}
+.bar-fill{height:100%; background:linear-gradient(90deg,var(--brass),var(--brass-d)); border-radius:6px}
+.bar-val{font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
+
+.recent{display:flex; flex-direction:column}
+.recent-row{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:10px;
+  background:none; border:none; border-bottom:1px solid var(--line); padding:10px 2px; cursor:pointer;
+  text-align:left; width:100%}
+.recent-row:last-child{border-bottom:none}
+.recent-row:hover{background:#FBFAF6}
+.recent-tiers{font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.recent-date{font-size:12px; color:var(--muted)}
+.recent-amt{font-size:13.5px; font-weight:600; font-variant-numeric:tabular-nums}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; vertical-align:middle}
+.dot.blue{background:var(--blue)} .dot.amber{background:var(--brass)}
+
+.form{display:flex; flex-direction:column; gap:18px}
+.seg{display:inline-flex; background:#EFEBE0; border-radius:10px; padding:3px; gap:3px}
+.seg button{border:none; background:none; padding:9px 16px; border-radius:8px; cursor:pointer;
+  font-size:13.5px; font-weight:500; color:var(--muted)}
+.seg button.on{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.fgrid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr}}
+.field{display:flex; flex-direction:column; gap:6px}
+.mini-label{font-size:12px; color:var(--muted); font-weight:500}
+.field input,.field select,.search,.month,.filters select,.addcat input{
+  border:1px solid var(--line); border-radius:9px; padding:10px 12px; font-size:14px;
+  color:var(--ink); background:#fff; width:100%}
+.field input:focus,.field select:focus,.search:focus{outline:none; border-color:var(--brass);
+  box-shadow:0 0 0 3px rgba(176,132,58,.15)}
+
+.taxes{display:flex; gap:12px; flex-wrap:wrap}
+.check{display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:10px;
+  padding:11px 15px; cursor:pointer; flex:1; min-width:160px; background:#FBFAF6}
+.check input{width:17px; height:17px; accent-color:var(--brass)}
+.check span{font-size:14px; font-weight:500}
+.check em{margin-left:auto; font-style:normal; font-variant-numeric:tabular-nums; color:var(--muted); font-size:13px}
+
+.status{display:flex; align-items:center; gap:14px}
+.total-strip{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  background:var(--ink); border-radius:12px; padding:14px 16px}
+.total-strip>div{display:flex; flex-direction:column; gap:3px}
+.total-strip span{font-size:11px; color:#A9BBB2; text-transform:uppercase; letter-spacing:.4px}
+.total-strip strong{color:#fff; font-size:15px; font-variant-numeric:tabular-nums}
+.total-strip .ttc strong{color:var(--brass); font-size:18px}
+
+.actions{display:flex; justify-content:flex-end; gap:10px}
+.btn-primary{background:var(--brass); color:var(--ink); border:none; padding:11px 22px; border-radius:10px;
+  font-size:14px; font-weight:600; cursor:pointer}
+.btn-primary:hover{background:var(--brass-d); color:#fff}
+.btn-primary:disabled{opacity:.45; cursor:not-allowed}
+.btn-ghost{background:#fff; color:var(--ink); border:1px solid var(--line); padding:10px 18px;
+  border-radius:10px; font-size:13.5px; font-weight:500; cursor:pointer}
+.btn-ghost:hover{border-color:var(--brass)}
+.btn-ghost:disabled{opacity:.45; cursor:not-allowed}
+
+.filters{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+.search{flex:1; min-width:200px}
+.filters select,.month{width:auto; min-width:130px}
+.table-wrap{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:auto}
+table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:760px}
+th{text-align:left; padding:13px 14px; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px;
+  color:var(--muted); border-bottom:1px solid var(--line); font-weight:600; background:#FBFAF6}
+td{padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:middle}
+tbody tr:hover{background:#FBFAF6}
+.num{text-align:right; font-variant-numeric:tabular-nums}
+.strong{font-weight:600}
+.nowrap{white-space:nowrap}
+.piece{color:var(--muted); font-size:12px}
+.chip{font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:20px; white-space:nowrap}
+.chip.ok{background:#E4F0EA; color:var(--ok)}
+.chip.wait{background:#F6E9DD; color:var(--wait)}
+.rowact{display:flex; gap:6px; justify-content:flex-end}
+.rowact button{background:#fff; border:1px solid var(--line); border-radius:7px; padding:5px 9px;
+  cursor:pointer; font-size:13px}
+.rowact button:hover{border-color:var(--brass)}
+.rowact .del{background:var(--wait); color:#fff; border-color:var(--wait); font-size:12px; font-weight:600}
+tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; background:#FBFAF6;
+  border-top:2px solid var(--line)}
+
+.cats{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+.cat-chip{display:inline-flex; align-items:center; gap:7px; background:#F4F2EC; border:1px solid var(--line);
+  border-radius:8px; padding:6px 10px; font-size:13px}
+.cat-chip button{background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; line-height:1}
+.cat-chip button:hover{color:var(--wait)}
+.addcat{display:flex; gap:8px}
+.addcat input{flex:1}
+.saved{font-size:12.5px; color:var(--ok)}
+
+.attach{display:flex; align-items:center; gap:10px; flex-wrap:wrap; border:1px dashed #CFC8B8;
+  border-radius:10px; padding:12px 14px; background:#FBFAF6}
+.attach .btn-ghost{padding:8px 14px}
+.attach-name{font-size:13px; color:var(--muted); flex:1; min-width:120px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.attach-name.has{color:var(--ink); font-weight:500}
+.att-open{background:#fff; border:1px solid var(--line); border-radius:7px; padding:6px 11px;
+  cursor:pointer; font-size:13px; color:var(--ink)}
+.att-open:hover{border-color:var(--brass)}
+.attach-clear{background:none; border:none; color:var(--wait); cursor:pointer; font-size:13px; text-decoration:underline}
+.clip{color:var(--brass); font-size:13px}
+
+.empty-state{text-align:center; padding:60px 20px; color:var(--muted)}
+.empty-state h2{color:var(--ink); margin-bottom:8px}
+.empty-state p{margin-bottom:20px}
+
+/* ---- Connexion (cloud) ---- */
+#gate{position:fixed; inset:0; z-index:100; background:var(--ink);
+  display:flex; align-items:center; justify-content:center; padding:24px}
+.gate-card{background:var(--card); border-radius:18px; padding:34px 30px; width:100%; max-width:380px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.gate-mark{width:54px; height:54px; border-radius:13px; display:grid; place-items:center; margin:0 auto 14px;
+  background:var(--brass); color:var(--ink); font-size:30px; font-weight:700; font-family:'Fraunces',serif}
+.gate-card h1{font-family:'Fraunces',serif; font-weight:600; font-size:22px; text-align:center}
+.gate-card .gate-sub{text-align:center; color:var(--muted); font-size:13px; margin:4px 0 22px}
+.gate-card label{display:block; font-size:12px; font-weight:600; color:var(--ink-2); margin-bottom:6px; margin-top:14px}
+.gate-card input{width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:10px; font-size:15px}
+.gate-card input:focus{outline:none; border-color:var(--brass)}
+.gate-btn{width:100%; margin-top:22px; padding:12px; border:none; border-radius:10px; cursor:pointer;
+  background:var(--brass); color:var(--ink); font-size:15px; font-weight:600}
+.gate-btn:hover{background:var(--brass-d); color:#fff}
+.gate-btn:disabled{opacity:.6; cursor:default}
+.gate-err{color:#B23B3B; font-size:13px; margin-top:14px; text-align:center; min-height:18px}
+.hdr-user{display:flex; align-items:center; gap:10px; color:#A9BBB2; font-size:13px}
+.signout{background:rgba(255,255,255,.08); border:none; color:#F4F2EC; padding:7px 12px; border-radius:8px;
+  font-size:13px; cursor:pointer; font-weight:500}
+.signout:hover{background:rgba(255,255,255,.16)}
+</style>
+</head>
+<body>
+<!-- Écran de connexion -->
+<div id="gate">
+  <form class="gate-card" id="gate-form" autocomplete="on">
+    <div class="gate-mark">ب</div>
+    <h1>BARAKA INVEST HOLDING</h1>
+    <div class="gate-sub">Factures &amp; dépenses · Accès sécurisé</div>
+    <label for="g-email">Adresse e-mail</label>
+    <input type="email" id="g-email" required autocomplete="username" placeholder="vous@exemple.com">
+    <label for="g-pass">Mot de passe</label>
+    <input type="password" id="g-pass" required autocomplete="current-password" placeholder="••••••••">
+    <button type="submit" class="gate-btn" id="g-submit">Se connecter</button>
+    <div class="gate-err" id="g-err"></div>
+  </form>
+</div>
+
+<header class="hidden" id="app-header">
+  <div class="brand">
+    <span class="mark">ب</span>
+    <div>
+      <div class="bname" id="hdr-name">BARAKA INVEST HOLDING</div>
+      <div class="bsub">Factures &amp; dépenses · FCFA</div>
+    </div>
+  </div>
+  <nav id="nav"></nav>
+  <div class="hdr-user"><span id="hdr-email"></span><button class="signout" id="hdr-signout">Déconnexion</button></div>
+</header>
+<main class="hidden" id="app-main"><div id="view"></div></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ==================================================================
+   CONFIGURATION SUPABASE
+   Remplacez les 2 valeurs ci-dessous par celles de VOTRE projet Supabase.
+   (Tableau de bord Supabase → Project Settings → API)
+   ================================================================== */
+var SUPABASE_URL      = "https://tzawocnxldsjadvuhyxg.supabase.co";
+var SUPABASE_ANON_KEY = "sb_publishable_vAfhWldHidW6sdAh4khecw_QCncABl5";
+var STORAGE_BUCKET    = "factures";
+/* ================================================================== */
+
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ---------- Constantes ---------- */
+var TVA_RATE = 0.18, CSS_RATE = 0.01;
+var MODES = ["Caisse","Virement bancaire","Chèque","Mobile money","Carte"];
+var DEFAULT_CATEGORIES = ["Achats marchandises","Loyer & charges","Salaires & RH",
+  "Honoraires & conseils","Transport & carburant","Frais bancaires","Télécom & internet",
+  "Entretien & réparations","Taxes & impôts","Frais de mission","Fournitures bureau","Autres"];
+var DEFAULT_SETTINGS = {raisonSociale:"BARAKA INVEST HOLDING",rccm:"",nif:"",adresse:"",
+  ville:"Libreville, Gabon",telephone:"",email:"",banque:"ORABANK",rib:""};
+
+/* ---------- Helpers ---------- */
+function fcfa(n){return new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(Math.round(n||0))+" FCFA";}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function monthOf(iso){return (iso||"").slice(0,7);}
+function monthLabel(ym){if(!ym)return"";var p=ym.split("-");var m=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];return m[(+p[1])-1]+" "+p[0];}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function computeLine(e){var ht=Number(e.montantHT)||0;var tva=e.tva?Math.round(ht*TVA_RATE):0;var css=e.css?Math.round(ht*CSS_RATE):0;return{ht:ht,tva:tva,css:css,ttc:ht+tva+css};}
+
+/* ---------- Stockage cloud (Supabase) ---------- */
+var CONFIG_ID = 1; // ligne unique de configuration partagée
+
+/* Conversion écriture <-> ligne de base de données */
+function rowFromEntry(e){
+  return {id:e.id, type:e.type, date:e.date||null, piece:e.piece||"", tiers:e.tiers||"",
+    category:e.category||"", montant_ht:Number(e.montantHT)||0, tva:!!e.tva, css:!!e.css,
+    mode:e.mode||"", statut:e.statut||"apayer", note:e.note||"", attach:e.attach||null};
+}
+function entryFromRow(r){
+  return {id:r.id, type:r.type, date:r.date, piece:r.piece, tiers:r.tiers, category:r.category,
+    montantHT:Number(r.montant_ht)||0, tva:!!r.tva, css:!!r.css, mode:r.mode, statut:r.statut,
+    note:r.note, attach:r.attach||null};
+}
+
+/* Chargement initial de toutes les données */
+function loadAll(){
+  return Promise.all([
+    sb.from("entries").select("*").order("date",{ascending:false}),
+    sb.from("config").select("*").eq("id",CONFIG_ID).maybeSingle()
+  ]).then(function(res){
+    var ent=res[0], cfg=res[1];
+    if(ent.error) throw ent.error;
+    S.entries = (ent.data||[]).map(entryFromRow);
+    if(cfg.error) throw cfg.error;
+    if(cfg.data){
+      S.categories = (cfg.data.categories&&cfg.data.categories.length)?cfg.data.categories:DEFAULT_CATEGORIES.slice();
+      S.settings = Object.assign({},DEFAULT_SETTINGS,cfg.data.settings||{});
+    }else{
+      S.categories = DEFAULT_CATEGORIES.slice();
+      S.settings = Object.assign({},DEFAULT_SETTINGS);
+    }
+  });
+}
+
+/* Écritures */
+function sbUpsertEntry(entry){
+  return sb.from("entries").upsert(rowFromEntry(entry)).then(function(r){
+    if(r.error){console.error(r.error);alert("Erreur d’enregistrement dans le cloud : "+r.error.message);}
+    return r;
+  });
+}
+function sbDeleteEntry(id){
+  return sb.from("entries").delete().eq("id",id).then(function(r){
+    if(r.error){console.error(r.error);alert("Erreur de suppression : "+r.error.message);}
+    return r;
+  });
+}
+
+/* Configuration (catégories + paramètres société) */
+var cfgTimer=null;
+function sbSaveConfig(){
+  clearTimeout(cfgTimer);
+  cfgTimer=setTimeout(function(){
+    sb.from("config").upsert({id:CONFIG_ID, settings:S.settings, categories:S.categories})
+      .then(function(r){ if(r.error) console.error("config:",r.error); });
+  },400); // léger anti-rebond pour la saisie continue
+}
+
+/* ---------- Pièces jointes (Supabase Storage) ---------- */
+function dataURLtoBlob(dataURL){
+  var parts=dataURL.split(","); var mime=(parts[0].match(/:(.*?);/)||[])[1]||"application/octet-stream";
+  var bin=atob(parts[1]); var n=bin.length; var u8=new Uint8Array(n);
+  while(n--) u8[n]=bin.charCodeAt(n);
+  return new Blob([u8],{type:mime});
+}
+function attUpload(id,dataURL,contentType){
+  var blob=dataURLtoBlob(dataURL);
+  return sb.storage.from(STORAGE_BUCKET).upload(id,blob,{contentType:contentType||blob.type,upsert:true})
+    .then(function(r){ if(r.error) throw r.error; return r; });
+}
+function attRemove(id){
+  if(!id) return Promise.resolve();
+  return sb.storage.from(STORAGE_BUCKET).remove([id]).then(function(){}).catch(function(){});
+}
+function openAttach(id){
+  sb.storage.from(STORAGE_BUCKET).createSignedUrl(id,120).then(function(r){
+    if(r.error||!r.data){alert("Pièce jointe introuvable.");return;}
+    window.open(r.data.signedUrl,"_blank");
+  }).catch(function(){alert("Impossible d’ouvrir la pièce jointe.");});
+}
+
+/* ---------- État ---------- */
+var S = {
+  tab:"dashboard",
+  editId:null,
+  entries: [],
+  categories: DEFAULT_CATEGORIES.slice(),
+  settings: Object.assign({},DEFAULT_SETTINGS),
+  dashMonth:null,
+  filters:{q:"",type:"all",statut:"all",month:"all"}
+};
+/* La configuration (catégories + paramètres) est sauvegardée dans le cloud. */
+function persistCats(){sbSaveConfig();}
+function persistSettings(){sbSaveConfig();}
+
+/* ---------- Navigation ---------- */
+function renderNav(){
+  var items=[["dashboard","Tableau de bord"],["saisie",S.editId?"Modifier":"Saisie"],["ecritures","Écritures"],["params","Paramètres"]];
+  var nav=document.getElementById("nav"); nav.innerHTML="";
+  items.forEach(function(it){
+    var b=document.createElement("button");
+    b.className="tab"+(S.tab===it[0]?" on":"");
+    b.textContent=it[1];
+    b.onclick=function(){ if(it[0]!=="saisie") S.editId=null; go(it[0]); };
+    nav.appendChild(b);
+  });
+  document.getElementById("hdr-name").textContent=S.settings.raisonSociale||"BARAKA INVEST HOLDING";
+}
+function go(tab){ S.tab=tab; render(); }
+function render(){ renderNav(); var v=document.getElementById("view");
+  if(S.tab==="dashboard")renderDashboard(v);
+  else if(S.tab==="saisie")renderSaisie(v);
+  else if(S.tab==="ecritures")renderEcritures(v);
+  else renderParams(v);
+}
+
+/* ---------- Tableau de bord ---------- */
+function renderDashboard(v){
+  if(S.entries.length===0){
+    v.innerHTML='<div class="empty-state"><h2>Aucune écriture pour l’instant</h2>'+
+      '<p>Commencez par enregistrer une facture fournisseur ou une dépense.</p>'+
+      '<button class="btn-primary" id="d-new">Nouvelle écriture</button></div>';
+    document.getElementById("d-new").onclick=function(){S.editId=null;go("saisie");};
+    return;
+  }
+  var months={}; S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
+  var mlist=Object.keys(months).sort().reverse(); if(!mlist.length)mlist=[monthOf(todayISO())];
+  if(!S.dashMonth||mlist.indexOf(S.dashMonth)<0)S.dashMonth=mlist[0];
+
+  var inMonth=S.entries.filter(function(e){return monthOf(e.date)===S.dashMonth;});
+  var t={ht:0,tva:0,css:0,ttc:0,encours:0};
+  inMonth.forEach(function(e){var c=computeLine(e);t.ht+=c.ht;t.tva+=c.tva;t.css+=c.css;t.ttc+=c.ttc;if(e.statut==="apayer")t.encours+=c.ttc;});
+
+  var catMap={}; inMonth.forEach(function(e){var c=computeLine(e);var k=e.category||"Autres";catMap[k]=(catMap[k]||0)+c.ttc;});
+  var byCat=Object.keys(catMap).map(function(k){return[k,catMap[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var maxCat=byCat.length?byCat[0][1]:1;
+
+  var html='<div class="page-head"><h2>Tableau de bord</h2>'+
+    '<select class="month" id="d-month">'+mlist.map(function(m){return '<option value="'+m+'"'+(m===S.dashMonth?" selected":"")+'>'+monthLabel(m)+'</option>';}).join("")+'</select></div>';
+
+  html+='<div class="kpis">'+
+    kpi("Total TTC",fcfa(t.ttc),"accent")+
+    kpi("Total HT",fcfa(t.ht),"")+
+    kpi("TVA déductible (18 %)",fcfa(t.tva),"")+
+    kpi("CSS (1 %)",fcfa(t.css),"")+
+    kpi("Encours à payer",fcfa(t.encours),t.encours>0?"warn":"")+'</div>';
+
+  html+='<div class="grid2"><section class="card"><h3>Dépenses par catégorie</h3>';
+  if(byCat.length===0)html+='<p class="muted">Pas de données ce mois.</p>';
+  else{html+='<div class="bars">'+byCat.map(function(r){
+    return '<div class="bar-row"><span class="bar-label">'+esc(r[0])+'</span>'+
+      '<div class="bar-track"><div class="bar-fill" style="width:'+((r[1]/maxCat)*100)+'%"></div></div>'+
+      '<span class="bar-val">'+fcfa(r[1])+'</span></div>';
+  }).join("")+'</div>';}
+  html+='</section><section class="card"><h3>Dernières écritures</h3><div class="recent" id="d-recent">';
+  if(inMonth.length===0)html+='<p class="muted">Rien ce mois.</p>';
+  else inMonth.slice(0,6).forEach(function(e){var c=computeLine(e);
+    html+='<button class="recent-row" data-id="'+e.id+'"><span class="dot '+(e.type==="facture"?"blue":"amber")+'"></span>'+
+      '<span class="recent-tiers">'+esc(e.tiers||"—")+'</span><span class="recent-date">'+esc(e.date)+'</span>'+
+      '<span class="recent-amt">'+fcfa(c.ttc)+'</span></button>';});
+  html+='</div></section></div>';
+  v.innerHTML=html;
+
+  document.getElementById("d-month").onchange=function(){S.dashMonth=this.value;renderDashboard(v);};
+  Array.prototype.forEach.call(v.querySelectorAll(".recent-row"),function(b){
+    b.onclick=function(){S.editId=b.getAttribute("data-id");go("saisie");};});
+}
+function kpi(label,val,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"><div class="kpi-label">'+label+'</div><div class="kpi-value">'+val+'</div></div>';}
+
+/* ---------- Saisie ---------- */
+function renderSaisie(v){
+  var editing=null; if(S.editId)editing=S.entries.filter(function(x){return x.id===S.editId;})[0]||null;
+  var d=editing?Object.assign({},editing):{type:"facture",date:todayISO(),piece:"",tiers:"",
+    category:(S.categories[0]||"Autres"),montantHT:"",tva:true,css:true,mode:MODES[0],statut:"apayer",note:""};
+  var attach=(editing&&editing.attach)?Object.assign({},editing.attach):null; // {id,name,type}
+  var newFileData=null; // dataURL si nouveau fichier choisi
+
+  var html='<div class="narrow"><h2>'+(editing?"Modifier l’écriture":"Nouvelle écriture")+'</h2>'+
+    '<div class="card form">'+
+    '<div class="seg" id="f-type"><button data-t="facture"'+(d.type==="facture"?' class="on"':'')+'>Facture fournisseur</button>'+
+      '<button data-t="depense"'+(d.type==="depense"?' class="on"':'')+'>Dépense</button></div>'+
+    '<div class="fgrid">'+
+      field("Date",'<input type="date" id="f-date" value="'+esc(d.date)+'">')+
+      field("N° de pièce / facture",'<input id="f-piece" value="'+esc(d.piece)+'" placeholder="ex. FAC-2026-014">')+
+      field('<span id="lbl-tiers">'+(d.type==="facture"?"Fournisseur":"Bénéficiaire")+'</span>','<input id="f-tiers" value="'+esc(d.tiers)+'" placeholder="Nom du tiers">')+
+      field("Catégorie",'<select id="f-cat">'+S.categories.map(function(c){return '<option'+(c===d.category?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>')+
+      field("Montant HT (FCFA)",'<input type="number" min="0" id="f-ht" value="'+esc(d.montantHT)+'" placeholder="0">')+
+      field("Mode de règlement",'<select id="f-mode">'+MODES.map(function(m){return '<option'+(m===d.mode?" selected":"")+'>'+m+'</option>';}).join("")+'</select>')+
+    '</div>'+
+    '<div class="taxes">'+
+      '<label class="check"><input type="checkbox" id="f-tva"'+(d.tva?" checked":"")+'><span>TVA 18 %</span><em id="em-tva">—</em></label>'+
+      '<label class="check"><input type="checkbox" id="f-css"'+(d.css?" checked":"")+'><span>CSS 1 %</span><em id="em-css">—</em></label>'+
+    '</div>'+
+    field("Note (facultatif)",'<input id="f-note" value="'+esc(d.note)+'" placeholder="Précision interne">')+
+    '<div class="field"><span class="mini-label">Pièce jointe — facture scannée (PDF ou image, max 8 Mo)</span>'+
+      '<div class="attach"><input type="file" id="f-file" accept="application/pdf,image/*" style="display:none">'+
+      '<button type="button" class="btn-ghost" id="f-file-btn">Choisir un fichier…</button>'+
+      '<span class="attach-name" id="f-attach-name">Aucun fichier</span>'+
+      '<button type="button" class="att-open" id="f-attach-open" style="display:none">Ouvrir</button>'+
+      '<button type="button" class="attach-clear" id="f-attach-clear" style="display:none">Retirer</button>'+
+      '</div></div>'+
+    '<div class="status"><span class="mini-label">Statut</span>'+
+      '<div class="seg" id="f-statut"><button data-s="apayer"'+(d.statut==="apayer"?' class="on"':'')+'>À payer</button>'+
+      '<button data-s="paye"'+(d.statut==="paye"?' class="on"':'')+'>Payé</button></div></div>'+
+    '<div class="total-strip">'+
+      '<div><span>HT</span><strong id="t-ht">0</strong></div>'+
+      '<div><span>TVA</span><strong id="t-tva">0</strong></div>'+
+      '<div><span>CSS</span><strong id="t-css">0</strong></div>'+
+      '<div class="ttc"><span>TTC</span><strong id="t-ttc">0</strong></div></div>'+
+    '<div class="actions">'+(editing?'<button class="btn-ghost" id="f-cancel">Annuler</button>':'')+
+      '<button class="btn-primary" id="f-save">'+(editing?"Enregistrer les modifications":"Enregistrer l’écriture")+'</button></div>'+
+    '</div></div>';
+  v.innerHTML=html;
+
+  function refresh(){
+    var c=computeLine({montantHT:document.getElementById("f-ht").value,
+      tva:document.getElementById("f-tva").checked,css:document.getElementById("f-css").checked});
+    document.getElementById("t-ht").textContent=fcfa(c.ht);
+    document.getElementById("t-tva").textContent=fcfa(c.tva);
+    document.getElementById("t-css").textContent=fcfa(c.css);
+    document.getElementById("t-ttc").textContent=fcfa(c.ttc);
+    document.getElementById("em-tva").textContent=fcfa(c.tva);
+    document.getElementById("em-css").textContent=fcfa(c.css);
+  }
+  document.getElementById("f-ht").addEventListener("input",refresh);
+  document.getElementById("f-tva").addEventListener("change",refresh);
+  document.getElementById("f-css").addEventListener("change",refresh);
+  refresh();
+
+  v.querySelectorAll("#f-type button").forEach(function(b){b.onclick=function(){
+    d.type=b.getAttribute("data-t");
+    v.querySelectorAll("#f-type button").forEach(function(x){x.className=x===b?"on":"";});
+    document.getElementById("lbl-tiers").textContent=d.type==="facture"?"Fournisseur":"Bénéficiaire";
+  };});
+  v.querySelectorAll("#f-statut button").forEach(function(b){b.onclick=function(){
+    d.statut=b.getAttribute("data-s");
+    v.querySelectorAll("#f-statut button").forEach(function(x){x.className=x===b?"on":"";});
+  };});
+
+  function updateAttachUI(){
+    var nameEl=document.getElementById("f-attach-name");
+    var clr=document.getElementById("f-attach-clear");
+    var op=document.getElementById("f-attach-open");
+    if(attach){
+      nameEl.textContent="📎 "+attach.name; nameEl.className="attach-name has";
+      clr.style.display="inline";
+      op.style.display=(attach.id&&!newFileData)?"inline":"none"; // ouvrable si déjà stocké
+    }else{
+      nameEl.textContent="Aucun fichier"; nameEl.className="attach-name";
+      clr.style.display="none"; op.style.display="none";
+    }
+  }
+  document.getElementById("f-file-btn").onclick=function(){document.getElementById("f-file").click();};
+  document.getElementById("f-file").addEventListener("change",function(){
+    var file=this.files[0]; if(!file)return;
+    if(file.size>8*1024*1024){alert("Fichier trop volumineux (max 8 Mo). Compressez le scan ou réduisez la photo.");this.value="";return;}
+    var reader=new FileReader();
+    reader.onload=function(){
+      newFileData=reader.result;
+      attach={id:(attach&&attach.id)||uid(),name:file.name,type:file.type};
+      updateAttachUI();
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("f-attach-open").onclick=function(){if(attach&&attach.id)openAttach(attach.id);};
+  document.getElementById("f-attach-clear").onclick=function(){
+    attach=null;newFileData=null;document.getElementById("f-file").value="";updateAttachUI();
+  };
+  updateAttachUI();
+
+  if(editing)document.getElementById("f-cancel").onclick=function(){S.editId=null;go("ecritures");};
+  document.getElementById("f-save").onclick=function(){
+    var entry={
+      id:editing?editing.id:null,type:d.type,
+      date:document.getElementById("f-date").value,
+      piece:document.getElementById("f-piece").value.trim(),
+      tiers:document.getElementById("f-tiers").value.trim(),
+      category:document.getElementById("f-cat").value,
+      montantHT:Number(document.getElementById("f-ht").value)||0,
+      tva:document.getElementById("f-tva").checked,
+      css:document.getElementById("f-css").checked,
+      mode:document.getElementById("f-mode").value,
+      statut:d.statut,
+      note:document.getElementById("f-note").value.trim()
+    };
+    if(!entry.tiers||!entry.date||entry.montantHT<=0){alert("Renseignez au moins le tiers, la date et un montant HT supérieur à 0.");return;}
+
+    if(!entry.id) entry.id=uid();
+    var btn=document.getElementById("f-save"); btn.disabled=true; btn.textContent="Enregistrement…";
+
+    function commit(){
+      return sbUpsertEntry(entry).then(function(r){
+        if(r.error){btn.disabled=false;btn.textContent=editing?"Enregistrer les modifications":"Enregistrer l’écriture";return;}
+        if(editing){S.entries=S.entries.map(function(x){return x.id===entry.id?entry:x;});}
+        else{S.entries.unshift(entry);}
+        S.editId=null; go("ecritures");
+      });
+    }
+    var oldId=(editing&&editing.attach)?editing.attach.id:null;
+    var ops=Promise.resolve();
+    if(attach===null){
+      entry.attach=null;
+      if(oldId)ops=attRemove(oldId);
+    }else if(newFileData){
+      entry.attach={id:attach.id,name:attach.name,type:attach.type};
+      ops=attUpload(attach.id,newFileData,attach.type).then(function(){
+        if(oldId&&oldId!==attach.id)return attRemove(oldId);
+      });
+    }else{
+      entry.attach=attach; // inchangé
+    }
+    ops.then(commit).catch(function(err){
+      console.error(err);
+      alert("L’écriture n’a pas pu être enregistrée dans le cloud (pièce jointe). "+(err&&err.message?err.message:"")+"\nVérifiez votre connexion et réessayez.");
+      btn.disabled=false; btn.textContent=editing?"Enregistrer les modifications":"Enregistrer l’écriture";
+    });
+  };
+}
+function field(label,inner){return '<label class="field"><span class="mini-label">'+label+'</span>'+inner+'</label>';}
+
+/* ---------- Écritures ---------- */
+function renderEcritures(v){
+  var months={}; S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
+  var mlist=Object.keys(months).sort().reverse();
+  var f=S.filters;
+  var html='<div class="page-head"><h2>Écritures <span class="count" id="ec-count"></span></h2>'+
+    '<button class="btn-ghost" id="ec-export">Exporter CSV</button></div>'+
+    '<div class="filters">'+
+    '<input class="search" id="ec-q" placeholder="Rechercher tiers, n° pièce…" value="'+esc(f.q)+'">'+
+    '<select id="ec-type"><option value="all">Tous types</option><option value="facture">Factures</option><option value="depense">Dépenses</option></select>'+
+    '<select id="ec-statut"><option value="all">Tous statuts</option><option value="apayer">À payer</option><option value="paye">Payé</option></select>'+
+    '<select id="ec-month"><option value="all">Tous les mois</option>'+mlist.map(function(m){return '<option value="'+m+'">'+monthLabel(m)+'</option>';}).join("")+'</select></div>'+
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Tiers</th><th>Catégorie</th>'+
+    '<th class="num">HT</th><th class="num">TVA</th><th class="num">CSS</th><th class="num">TTC</th><th>Statut</th><th></th></tr></thead>'+
+    '<tbody id="ec-body"></tbody><tfoot id="ec-foot"></tfoot></table></div>';
+  v.innerHTML=html;
+
+  var qEl=document.getElementById("ec-q"),tEl=document.getElementById("ec-type"),
+      sEl=document.getElementById("ec-statut"),mEl=document.getElementById("ec-month");
+  tEl.value=f.type; sEl.value=f.statut; mEl.value=f.month;
+
+  function filtered(){
+    return S.entries.filter(function(e){return f.type==="all"||e.type===f.type;})
+      .filter(function(e){return f.statut==="all"||e.statut===f.statut;})
+      .filter(function(e){return f.month==="all"||monthOf(e.date)===f.month;})
+      .filter(function(e){if(!f.q.trim())return true;var s=f.q.toLowerCase();
+        return [e.tiers,e.piece,e.category,e.note].some(function(x){return (x||"").toLowerCase().indexOf(s)>=0;});})
+      .sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  }
+  function drawRows(){
+    var rows=filtered();
+    document.getElementById("ec-count").textContent=rows.length;
+    var body=document.getElementById("ec-body"), foot=document.getElementById("ec-foot");
+    if(rows.length===0){body.innerHTML='<tr><td colspan="9" class="muted center">Aucune écriture ne correspond.</td></tr>';foot.innerHTML="";return;}
+    body.innerHTML=rows.map(function(e){var c=computeLine(e);
+      return '<tr><td class="nowrap">'+esc(e.date)+'</td>'+
+        '<td><span class="dot '+(e.type==="facture"?"blue":"amber")+'"></span>'+esc(e.tiers||"—")+
+        (e.piece?'<span class="piece"> · '+esc(e.piece)+'</span>':'')+'</td>'+
+        '<td>'+esc(e.category)+'</td>'+
+        '<td class="num">'+fcfa(c.ht)+'</td>'+
+        '<td class="num">'+(c.tva?fcfa(c.tva):"—")+'</td>'+
+        '<td class="num">'+(c.css?fcfa(c.css):"—")+'</td>'+
+        '<td class="num strong">'+fcfa(c.ttc)+'</td>'+
+        '<td><span class="chip '+(e.statut==="paye"?"ok":"wait")+'">'+(e.statut==="paye"?"Payé":"À payer")+'</span></td>'+
+        '<td class="rowact">'+
+        (e.attach?'<button data-att="'+e.attach.id+'" title="Voir la facture jointe">📎</button>':'')+
+        '<button data-edit="'+e.id+'" title="Modifier">✎</button>'+
+        '<button data-del="'+e.id+'" title="Supprimer">🗑</button></td></tr>';
+    }).join("");
+    var tot=rows.reduce(function(a,e){var c=computeLine(e);a.ht+=c.ht;a.tva+=c.tva;a.css+=c.css;a.ttc+=c.ttc;return a;},{ht:0,tva:0,css:0,ttc:0});
+    foot.innerHTML='<tr><td colspan="3">Total ('+rows.length+')</td>'+
+      '<td class="num">'+fcfa(tot.ht)+'</td><td class="num">'+fcfa(tot.tva)+'</td>'+
+      '<td class="num">'+fcfa(tot.css)+'</td><td class="num strong">'+fcfa(tot.ttc)+'</td><td colspan="2"></td></tr>';
+    body.querySelectorAll("[data-att]").forEach(function(b){b.onclick=function(){openAttach(b.getAttribute("data-att"));};});
+    body.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){S.editId=b.getAttribute("data-edit");go("saisie");};});
+    body.querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){
+      if(confirm("Supprimer cette écriture ?")){
+        var id=b.getAttribute("data-del");
+        var row=S.entries.filter(function(x){return x.id===id;})[0];
+        sbDeleteEntry(id).then(function(r){
+          if(r.error)return;
+          if(row&&row.attach)attRemove(row.attach.id);
+          S.entries=S.entries.filter(function(x){return x.id!==id;});drawRows();
+        });
+      }
+    };});
+  }
+  qEl.addEventListener("input",function(){f.q=this.value;drawRows();});
+  tEl.onchange=function(){f.type=this.value;drawRows();};
+  sEl.onchange=function(){f.statut=this.value;drawRows();};
+  mEl.onchange=function(){f.month=this.value;drawRows();};
+  document.getElementById("ec-export").onclick=function(){exportCSV(filtered());};
+  drawRows();
+}
+function exportCSV(rows){
+  if(!rows.length){alert("Aucune écriture à exporter.");return;}
+  var head=["Date","Type","Pièce","Tiers","Catégorie","Mode","HT","TVA","CSS","TTC","Statut","Note"];
+  var lines=rows.map(function(e){var c=computeLine(e);
+    return [e.date,e.type==="facture"?"Facture":"Dépense",e.piece,e.tiers,e.category,e.mode,
+      c.ht,c.tva,c.css,c.ttc,e.statut==="paye"?"Payé":"À payer",(e.note||"").replace(/[;\n]/g," ")]
+      .map(function(x){return '"'+String(x==null?"":x)+'"';}).join(";");});
+  var csv=[head.join(";")].concat(lines).join("\n");
+  var blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob);var a=document.createElement("a");
+  a.href=url;a.download="ecritures_baraka_"+todayISO()+".csv";a.click();URL.revokeObjectURL(url);
+}
+
+/* ---------- Paramètres ---------- */
+function renderParams(v){
+  var s=S.settings;
+  var rows=[["raisonSociale","Raison sociale"],["rccm","RCCM"],["nif","NIF"],["telephone","Téléphone"],
+    ["adresse","Adresse"],["ville","Ville / Pays"],["email","E-mail"],["banque","Banque"],["rib","RIB / IBAN"]];
+  var html='<div class="narrow"><h2>Paramètres société</h2><div class="card form"><div class="fgrid">'+
+    rows.map(function(r){return field(r[1],'<input data-k="'+r[0]+'" value="'+esc(s[r[0]]||"")+'">');}).join("")+
+    '</div><p class="saved">✓ Enregistré automatiquement</p></div>'+
+    '<div class="card form"><h3>Catégories de dépenses</h3><div class="cats" id="p-cats"></div>'+
+    '<div class="addcat"><input id="p-newcat" placeholder="Nouvelle catégorie"><button class="btn-ghost" id="p-addcat">Ajouter</button></div></div></div>';
+  v.innerHTML=html;
+
+  v.querySelectorAll("[data-k]").forEach(function(inp){inp.addEventListener("input",function(){
+    S.settings[inp.getAttribute("data-k")]=inp.value;persistSettings();
+    document.getElementById("hdr-name").textContent=S.settings.raisonSociale||"BARAKA INVEST HOLDING";
+  });});
+
+  function drawCats(){
+    var box=document.getElementById("p-cats");
+    box.innerHTML=S.categories.map(function(c){return '<span class="cat-chip">'+esc(c)+'<button data-c="'+esc(c)+'">×</button></span>';}).join("");
+    box.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){
+      S.categories=S.categories.filter(function(x){return x!==b.getAttribute("data-c");});persistCats();drawCats();};});
+  }
+  drawCats();
+  function add(){var val=document.getElementById("p-newcat").value.trim();
+    if(val&&S.categories.indexOf(val)<0){S.categories.push(val);persistCats();drawCats();}
+    document.getElementById("p-newcat").value="";}
+  document.getElementById("p-addcat").onclick=add;
+  document.getElementById("p-newcat").addEventListener("keydown",function(e){if(e.key==="Enter")add();});
+}
+
+/* ---------- Authentification & démarrage ---------- */
+var gate=document.getElementById("gate");
+var appHeader=document.getElementById("app-header");
+var appMain=document.getElementById("app-main");
+var started=false;
+
+function showApp(session){
+  document.getElementById("hdr-email").textContent=(session&&session.user&&session.user.email)||"";
+  loadAll().then(function(){
+    gate.classList.add("hidden");
+    appHeader.classList.remove("hidden");
+    appMain.classList.remove("hidden");
+    started=true;
+    render();
+  }).catch(function(err){
+    console.error(err);
+    document.getElementById("g-err").textContent="Connexion réussie mais chargement des données impossible : "+(err.message||"erreur")+". Vérifiez le schéma SQL.";
+  });
+}
+function showGate(){
+  started=false;
+  gate.classList.remove("hidden");
+  appHeader.classList.add("hidden");
+  appMain.classList.add("hidden");
+}
+
+document.getElementById("gate-form").addEventListener("submit",function(ev){
+  ev.preventDefault();
+  var email=document.getElementById("g-email").value.trim();
+  var pass=document.getElementById("g-pass").value;
+  var errEl=document.getElementById("g-err"); errEl.textContent="";
+  var btn=document.getElementById("g-submit"); btn.disabled=true; btn.textContent="Connexion…";
+  sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){
+    btn.disabled=false; btn.textContent="Se connecter";
+    if(r.error){
+      errEl.textContent = r.error.message.indexOf("Invalid")>=0
+        ? "E-mail ou mot de passe incorrect." : r.error.message;
+      return;
+    }
+    /* onAuthStateChange déclenche l'affichage de l'app */
+  });
+});
+
+document.getElementById("hdr-signout").onclick=function(){
+  sb.auth.signOut().then(function(){ document.getElementById("g-pass").value=""; showGate(); });
+};
+
+/* Réagit aux connexions/déconnexions et à la session déjà active */
+sb.auth.onAuthStateChange(function(event,session){
+  if(session && !started){ showApp(session); }
+  else if(!session){ showGate(); }
+});
+sb.auth.getSession().then(function(r){
+  if(r.data && r.data.session){ showApp(r.data.session); }
+});
+</script>
+</body>
+</html>
