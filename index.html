@@ -165,6 +165,7 @@ tfoot td{padding:13px 14px; font-weight:600; font-variant-numeric:tabular-nums; 
 .rowbtn-att{background:var(--brass); color:var(--ink); border:none; border-radius:7px;
   padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; margin-right:6px}
 .rowbtn-att:hover{background:var(--brass-d); color:#fff}
+.head-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 
 /* Galerie Factures */
 .fac-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:16px}
@@ -253,6 +254,8 @@ var DEFAULT_CATEGORIES = ["Achats marchandises","Loyer & charges","Salaires & RH
   "Entretien & réparations","Taxes & impôts","Frais de mission","Fournitures bureau","Autres"];
 var DEFAULT_SETTINGS = {raisonSociale:"BARAKA INVEST HOLDING",rccm:"",nif:"",adresse:"",
   ville:"Libreville, Gabon",telephone:"",email:"",banque:"ORABANK",rib:""};
+var DEFAULT_REC_CATEGORIES = ["Ventes marchandises","Prestations de services","Loyers perçus",
+  "Produits financiers","Subventions","Apports & financements","Autres recettes"];
 
 /* ---------- Helpers ---------- */
 function fcfa(n){return new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(Math.round(n||0))+" FCFA";}
@@ -278,24 +281,40 @@ function entryFromRow(r){
     note:r.note, attach:r.attach||null};
 }
 
+/* Recettes <-> ligne de base de données */
+function recRow(e){
+  return {id:e.id, date:e.date||null, client:e.client||"", category:e.category||"",
+    montant:Number(e.montant)||0, mode:e.mode||"", statut:e.statut||"a_encaisser",
+    note:e.note||"", attach:e.attach||null};
+}
+function recFromRow(r){
+  return {id:r.id, date:r.date, client:r.client, category:r.category, montant:Number(r.montant)||0,
+    mode:r.mode, statut:r.statut, note:r.note, attach:r.attach||null};
+}
+
 /* Chargement initial de toutes les données */
 function loadAll(){
   return Promise.all([
     sb.from("entries").select("*").order("date",{ascending:false}),
     sb.from("config").select("*").eq("id",CONFIG_ID).maybeSingle(),
-    sb.from("profiles").select("role").maybeSingle()
+    sb.from("profiles").select("role").maybeSingle(),
+    sb.from("recettes").select("*").order("date",{ascending:false})
   ]).then(function(res){
-    var ent=res[0], cfg=res[1], prof=res[2];
+    var ent=res[0], cfg=res[1], prof=res[2], rec=res[3];
     S.role = (prof && prof.data && prof.data.role) ? prof.data.role : "invite";
     S.isAdmin = (S.role === "admin");
     if(ent.error) throw ent.error;
     S.entries = (ent.data||[]).map(entryFromRow);
+    if(rec.error) throw rec.error;
+    S.recettes = (rec.data||[]).map(recFromRow);
     if(cfg.error) throw cfg.error;
     if(cfg.data){
       S.categories = (cfg.data.categories&&cfg.data.categories.length)?cfg.data.categories:DEFAULT_CATEGORIES.slice();
+      S.recCategories = (cfg.data.rec_categories&&cfg.data.rec_categories.length)?cfg.data.rec_categories:DEFAULT_REC_CATEGORIES.slice();
       S.settings = Object.assign({},DEFAULT_SETTINGS,cfg.data.settings||{});
     }else{
       S.categories = DEFAULT_CATEGORIES.slice();
+      S.recCategories = DEFAULT_REC_CATEGORIES.slice();
       S.settings = Object.assign({},DEFAULT_SETTINGS);
     }
   });
@@ -315,12 +334,26 @@ function sbDeleteEntry(id){
   });
 }
 
+/* Recettes */
+function sbUpsertRecette(rec){
+  return sb.from("recettes").upsert(recRow(rec)).then(function(r){
+    if(r.error){console.error(r.error);alert("Erreur d’enregistrement de la recette : "+r.error.message);}
+    return r;
+  });
+}
+function sbDeleteRecette(id){
+  return sb.from("recettes").delete().eq("id",id).then(function(r){
+    if(r.error){console.error(r.error);alert("Erreur de suppression : "+r.error.message);}
+    return r;
+  });
+}
+
 /* Configuration (catégories + paramètres société) */
 var cfgTimer=null;
 function sbSaveConfig(){
   clearTimeout(cfgTimer);
   cfgTimer=setTimeout(function(){
-    sb.from("config").upsert({id:CONFIG_ID, settings:S.settings, categories:S.categories})
+    sb.from("config").upsert({id:CONFIG_ID, settings:S.settings, categories:S.categories, rec_categories:S.recCategories})
       .then(function(r){ if(r.error) console.error("config:",r.error); });
   },400); // léger anti-rebond pour la saisie continue
 }
@@ -353,20 +386,25 @@ var S = {
   tab:"dashboard",
   editId:null,
   entries: [],
+  recettes: [],
+  recEditId:null,
   categories: DEFAULT_CATEGORIES.slice(),
+  recCategories: DEFAULT_REC_CATEGORIES.slice(),
   settings: Object.assign({},DEFAULT_SETTINGS),
   dashMonth:null,
-  filters:{q:"",type:"all",statut:"all",month:"all"}
+  filters:{q:"",type:"all",statut:"all",month:"all"},
+  recFilters:{q:"",statut:"all",month:"all"}
 };
 /* La configuration (catégories + paramètres) est sauvegardée dans le cloud. */
 function persistCats(){sbSaveConfig();}
+function persistRecCats(){sbSaveConfig();}
 function persistSettings(){sbSaveConfig();}
 
 /* ---------- Navigation ---------- */
 function renderNav(){
-  var items=[["dashboard","Tableau de bord"],["saisie",S.editId?"Modifier":"Saisie"],["ecritures","Écritures"],["factures","Factures"],["params","Paramètres"]];
+  var items=[["dashboard","Tableau de bord"],["ecritures","Dépenses"],["recettes","Recettes"],["factures","Factures"],["params","Paramètres"]];
   if(!S.isAdmin){ /* invité : consultation seule */
-    items=items.filter(function(it){return it[0]!=="saisie"&&it[0]!=="params";});
+    items=items.filter(function(it){return it[0]!=="params";});
   }
   var nav=document.getElementById("nav"); nav.innerHTML="";
   items.forEach(function(it){
@@ -386,25 +424,34 @@ function render(){ renderNav(); var v=document.getElementById("view");
   else if(S.tab==="saisie")renderSaisie(v);
   else if(S.tab==="ecritures")renderEcritures(v);
   else if(S.tab==="factures")renderFactures(v);
+  else if(S.tab==="recettes")renderRecettes(v);
+  else if(S.tab==="saisierec")renderSaisieRec(v);
   else renderParams(v);
 }
 
 /* ---------- Tableau de bord ---------- */
 function renderDashboard(v){
-  if(S.entries.length===0){
-    v.innerHTML='<div class="empty-state"><h2>Aucune écriture pour l’instant</h2>'+
-      '<p>'+(S.isAdmin?"Commencez par enregistrer une facture fournisseur ou une dépense.":"Aucune donnée à consulter pour le moment.")+'</p>'+
-      (S.isAdmin?'<button class="btn-primary" id="d-new">Nouvelle écriture</button>':'')+'</div>';
+  if(S.entries.length===0 && S.recettes.length===0){
+    v.innerHTML='<div class="empty-state"><h2>Aucune donnée pour l’instant</h2>'+
+      '<p>'+(S.isAdmin?"Commencez par enregistrer une dépense ou une recette.":"Aucune donnée à consulter pour le moment.")+'</p>'+
+      (S.isAdmin?'<button class="btn-primary" id="d-new">Nouvelle dépense</button>':'')+'</div>';
     if(S.isAdmin) document.getElementById("d-new").onclick=function(){S.editId=null;go("saisie");};
     return;
   }
-  var months={}; S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
+  var months={};
+  S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
+  S.recettes.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
   var mlist=Object.keys(months).sort().reverse(); if(!mlist.length)mlist=[monthOf(todayISO())];
   if(!S.dashMonth||mlist.indexOf(S.dashMonth)<0)S.dashMonth=mlist[0];
 
   var inMonth=S.entries.filter(function(e){return monthOf(e.date)===S.dashMonth;});
   var t={ht:0,tva:0,css:0,ttc:0,encours:0};
   inMonth.forEach(function(e){var c=computeLine(e);t.ht+=c.ht;t.tva+=c.tva;t.css+=c.css;t.ttc+=c.ttc;if(e.statut==="apayer")t.encours+=c.ttc;});
+
+  var recInMonth=S.recettes.filter(function(e){return monthOf(e.date)===S.dashMonth;});
+  var rec={total:0,encaisse:0,attente:0};
+  recInMonth.forEach(function(e){var m=Number(e.montant)||0;rec.total+=m;if(e.statut==="encaisse")rec.encaisse+=m;else rec.attente+=m;});
+  var solde=rec.total - t.ttc;
 
   var catMap={}; inMonth.forEach(function(e){var c=computeLine(e);var k=e.category||"Autres";catMap[k]=(catMap[k]||0)+c.ttc;});
   var byCat=Object.keys(catMap).map(function(k){return[k,catMap[k]];}).sort(function(a,b){return b[1]-a[1];});
@@ -414,11 +461,12 @@ function renderDashboard(v){
     '<select class="month" id="d-month">'+mlist.map(function(m){return '<option value="'+m+'"'+(m===S.dashMonth?" selected":"")+'>'+monthLabel(m)+'</option>';}).join("")+'</select></div>';
 
   html+='<div class="kpis">'+
-    kpi("Total TTC",fcfa(t.ttc),"accent")+
-    kpi("Total HT",fcfa(t.ht),"")+
+    kpi("Recettes",fcfa(rec.total),"")+
+    kpi("Dépenses (TTC)",fcfa(t.ttc),"")+
+    kpi("Solde",fcfa(solde),solde<0?"warn":"accent")+
     kpi("TVA déductible (18 %)",fcfa(t.tva),"")+
-    kpi("CSS (1 %)",fcfa(t.css),"")+
-    kpi("Encours à payer",fcfa(t.encours),t.encours>0?"warn":"")+'</div>';
+    kpi("Encours à payer",fcfa(t.encours),t.encours>0?"warn":"")+
+    kpi("À encaisser",fcfa(rec.attente),rec.attente>0?"warn":"")+'</div>';
 
   html+='<div class="grid2"><section class="card"><h3>Dépenses par catégorie</h3>';
   if(byCat.length===0)html+='<p class="muted">Pas de données ce mois.</p>';
@@ -600,8 +648,9 @@ function renderEcritures(v){
   var months={}; S.entries.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
   var mlist=Object.keys(months).sort().reverse();
   var f=S.filters;
-  var html='<div class="page-head"><h2>Écritures <span class="count" id="ec-count"></span></h2>'+
-    '<button class="btn-ghost" id="ec-export">Exporter CSV</button></div>'+
+  var html='<div class="page-head"><h2>Dépenses <span class="count" id="ec-count"></span></h2>'+
+    '<div class="head-actions">'+(S.isAdmin?'<button class="btn-primary" id="ec-new">+ Nouvelle dépense</button>':'')+
+    '<button class="btn-ghost" id="ec-export">Exporter CSV</button></div></div>'+
     '<div class="filters">'+
     '<input class="search" id="ec-q" placeholder="Rechercher tiers, n° pièce…" value="'+esc(f.q)+'">'+
     '<select id="ec-type"><option value="all">Tous types</option><option value="facture">Factures</option><option value="depense">Dépenses</option></select>'+
@@ -667,6 +716,7 @@ function renderEcritures(v){
   sEl.onchange=function(){f.statut=this.value;drawRows();};
   mEl.onchange=function(){f.month=this.value;drawRows();};
   document.getElementById("ec-export").onclick=function(){exportCSV(filtered());};
+  var ecNew=document.getElementById("ec-new"); if(ecNew)ecNew.onclick=function(){S.editId=null;go("saisie");};
   drawRows();
 }
 
@@ -702,6 +752,169 @@ function renderFactures(v){
     }).catch(function(){});
   });
 }
+/* ---------- Recettes (liste) ---------- */
+function renderRecettes(v){
+  var f=S.recFilters;
+  var months={}; S.recettes.forEach(function(e){var m=monthOf(e.date);if(m)months[m]=1;});
+  var mlist=Object.keys(months).sort().reverse();
+  var html='<div class="page-head"><h2>Recettes <span class="count" id="rc-count"></span></h2>'+
+    '<div class="head-actions">'+(S.isAdmin?'<button class="btn-primary" id="rc-new">+ Nouvelle recette</button>':'')+
+    '<button class="btn-ghost" id="rc-export">Exporter CSV</button></div></div>'+
+    '<div class="filters">'+
+    '<input class="search" id="rc-q" placeholder="Rechercher client, catégorie…" value="'+esc(f.q)+'">'+
+    '<select id="rc-statut"><option value="all">Tous statuts</option><option value="encaisse">Encaissé</option><option value="a_encaisser">À encaisser</option></select>'+
+    '<select id="rc-month"><option value="all">Tous les mois</option>'+mlist.map(function(m){return '<option value="'+m+'">'+monthLabel(m)+'</option>';}).join("")+'</select></div>'+
+    '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Client</th><th>Catégorie</th>'+
+    '<th class="num">Montant</th><th>Mode</th><th>Statut</th><th></th></tr></thead>'+
+    '<tbody id="rc-body"></tbody><tfoot id="rc-foot"></tfoot></table></div>';
+  v.innerHTML=html;
+  var qEl=document.getElementById("rc-q"),sEl=document.getElementById("rc-statut"),mEl=document.getElementById("rc-month");
+  sEl.value=f.statut; mEl.value=f.month;
+  function filtered(){
+    return S.recettes.filter(function(e){return f.statut==="all"||e.statut===f.statut;})
+      .filter(function(e){return f.month==="all"||monthOf(e.date)===f.month;})
+      .filter(function(e){if(!f.q.trim())return true;var s=f.q.toLowerCase();
+        return [e.client,e.category,e.note].some(function(x){return (x||"").toLowerCase().indexOf(s)>=0;});})
+      .sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
+  }
+  function draw(){
+    var rows=filtered();
+    document.getElementById("rc-count").textContent=rows.length;
+    var body=document.getElementById("rc-body"),foot=document.getElementById("rc-foot");
+    if(rows.length===0){body.innerHTML='<tr><td colspan="7" class="muted center">Aucune recette ne correspond.</td></tr>';foot.innerHTML="";return;}
+    body.innerHTML=rows.map(function(e){
+      return '<tr><td class="nowrap">'+esc(e.date)+'</td>'+
+        '<td><span class="dot ok"></span>'+esc(e.client||"—")+'</td>'+
+        '<td>'+esc(e.category)+'</td>'+
+        '<td class="num strong">'+fcfa(e.montant)+'</td>'+
+        '<td>'+esc(e.mode||"")+'</td>'+
+        '<td><span class="chip '+(e.statut==="encaisse"?"ok":"wait")+'">'+(e.statut==="encaisse"?"Encaissé":"À encaisser")+'</span></td>'+
+        '<td class="rowact">'+
+        (e.attach?'<button class="rowbtn-att" data-att="'+e.attach.id+'">Aperçu</button>':'')+
+        (S.isAdmin?'<button data-edit="'+e.id+'" title="Modifier">✎</button>'+
+        '<button data-del="'+e.id+'" title="Supprimer">🗑</button>':'')+'</td></tr>';
+    }).join("");
+    var tot=rows.reduce(function(a,e){return a+(Number(e.montant)||0);},0);
+    foot.innerHTML='<tr><td colspan="3">Total ('+rows.length+')</td><td class="num strong">'+fcfa(tot)+'</td><td colspan="3"></td></tr>';
+    body.querySelectorAll("[data-att]").forEach(function(b){b.onclick=function(){openAttach(b.getAttribute("data-att"));};});
+    body.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){S.recEditId=b.getAttribute("data-edit");go("saisierec");};});
+    body.querySelectorAll("[data-del]").forEach(function(b){b.onclick=function(){
+      if(confirm("Supprimer cette recette ?")){
+        var id=b.getAttribute("data-del");
+        var row=S.recettes.filter(function(x){return x.id===id;})[0];
+        sbDeleteRecette(id).then(function(r){
+          if(r.error)return;
+          if(row&&row.attach)attRemove(row.attach.id);
+          S.recettes=S.recettes.filter(function(x){return x.id!==id;});draw();
+        });
+      }
+    };});
+  }
+  qEl.addEventListener("input",function(){f.q=this.value;draw();});
+  sEl.onchange=function(){f.statut=this.value;draw();};
+  mEl.onchange=function(){f.month=this.value;draw();};
+  var rn=document.getElementById("rc-new"); if(rn)rn.onclick=function(){S.recEditId=null;go("saisierec");};
+  document.getElementById("rc-export").onclick=function(){exportRecCSV(filtered());};
+  draw();
+}
+function exportRecCSV(rows){
+  if(!rows.length){alert("Aucune recette à exporter.");return;}
+  var head=["Date","Client","Catégorie","Mode","Montant","Statut","Note"];
+  var lines=rows.map(function(e){
+    return [e.date,e.client,e.category,e.mode,e.montant,e.statut==="encaisse"?"Encaissé":"À encaisser",(e.note||"").replace(/[;\n]/g," ")]
+      .map(function(x){return '"'+String(x==null?"":x)+'"';}).join(";");});
+  var csv=[head.join(";")].concat(lines).join("\n");
+  var blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob);var a=document.createElement("a");
+  a.href=url;a.download="recettes_baraka_"+todayISO()+".csv";a.click();URL.revokeObjectURL(url);
+}
+
+/* ---------- Saisie recette ---------- */
+function renderSaisieRec(v){
+  if(!S.isAdmin){ v.innerHTML='<div class="empty-state"><h2>Accès en consultation</h2>'+
+    '<p>Votre profil « Invité » permet uniquement de consulter les données.</p></div>'; return; }
+  var editing=null; if(S.recEditId)editing=S.recettes.filter(function(x){return x.id===S.recEditId;})[0]||null;
+  var d=editing?Object.assign({},editing):{date:todayISO(),client:"",category:(S.recCategories[0]||"Autres recettes"),montant:"",mode:(MODES[1]||MODES[0]),statut:"encaisse",note:""};
+  var attach=(editing&&editing.attach)?Object.assign({},editing.attach):null;
+  var newFileData=null;
+  var html='<div class="narrow"><h2>'+(editing?"Modifier la recette":"Nouvelle recette")+'</h2>'+
+    '<div class="card form">'+
+    '<div class="fgrid">'+
+      field("Date",'<input type="date" id="r-date" value="'+esc(d.date)+'">')+
+      field("Client / Payeur",'<input id="r-client" value="'+esc(d.client)+'" placeholder="Nom du client">')+
+      field("Catégorie",'<select id="r-cat">'+S.recCategories.map(function(c){return '<option'+(c===d.category?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>')+
+      field("Montant (FCFA)",'<input type="number" min="0" id="r-montant" value="'+esc(d.montant)+'" placeholder="0">')+
+      field("Mode de règlement",'<select id="r-mode">'+MODES.map(function(m){return '<option'+(m===d.mode?" selected":"")+'>'+m+'</option>';}).join("")+'</select>')+
+    '</div>'+
+    field("Note (facultatif)",'<input id="r-note" value="'+esc(d.note)+'" placeholder="Précision interne">')+
+    '<div class="field"><span class="mini-label">Pièce jointe — reçu / facture (PDF ou image, max 8 Mo)</span>'+
+      '<div class="attach"><input type="file" id="r-file" accept="application/pdf,image/*" style="display:none">'+
+      '<button type="button" class="btn-ghost" id="r-file-btn">Choisir un fichier…</button>'+
+      '<span class="attach-name" id="r-attach-name">Aucun fichier</span>'+
+      '<button type="button" class="att-open" id="r-attach-open" style="display:none">Ouvrir</button>'+
+      '<button type="button" class="attach-clear" id="r-attach-clear" style="display:none">Retirer</button>'+
+      '</div></div>'+
+    '<div class="status"><span class="mini-label">Statut</span>'+
+      '<div class="seg" id="r-statut"><button data-s="encaisse"'+(d.statut==="encaisse"?' class="on"':'')+'>Encaissé</button>'+
+      '<button data-s="a_encaisser"'+(d.statut==="a_encaisser"?' class="on"':'')+'>À encaisser</button></div></div>'+
+    '<div class="actions"><button class="btn-ghost" id="r-cancel">Annuler</button>'+
+      '<button class="btn-primary" id="r-save">'+(editing?"Enregistrer les modifications":"Enregistrer la recette")+'</button></div>'+
+    '</div></div>';
+  v.innerHTML=html;
+
+  v.querySelectorAll("#r-statut button").forEach(function(b){b.onclick=function(){
+    d.statut=b.getAttribute("data-s");
+    v.querySelectorAll("#r-statut button").forEach(function(x){x.className=x===b?"on":"";});
+  };});
+
+  function updateAttachUI(){
+    var nameEl=document.getElementById("r-attach-name"),clr=document.getElementById("r-attach-clear"),op=document.getElementById("r-attach-open");
+    if(attach){nameEl.textContent="📎 "+attach.name; nameEl.className="attach-name has"; clr.style.display="inline"; op.style.display=(attach.id&&!newFileData)?"inline":"none";}
+    else{nameEl.textContent="Aucun fichier"; nameEl.className="attach-name"; clr.style.display="none"; op.style.display="none";}
+  }
+  document.getElementById("r-file-btn").onclick=function(){document.getElementById("r-file").click();};
+  document.getElementById("r-file").addEventListener("change",function(){
+    var file=this.files[0]; if(!file)return;
+    if(file.size>8*1024*1024){alert("Fichier trop volumineux (max 8 Mo).");this.value="";return;}
+    var reader=new FileReader();
+    reader.onload=function(){newFileData=reader.result;attach={id:(attach&&attach.id)||uid(),name:file.name,type:file.type};updateAttachUI();};
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("r-attach-open").onclick=function(){if(attach&&attach.id)openAttach(attach.id);};
+  document.getElementById("r-attach-clear").onclick=function(){attach=null;newFileData=null;document.getElementById("r-file").value="";updateAttachUI();};
+  updateAttachUI();
+
+  document.getElementById("r-cancel").onclick=function(){S.recEditId=null;go("recettes");};
+  document.getElementById("r-save").onclick=function(){
+    var rec={id:editing?editing.id:null,date:document.getElementById("r-date").value,
+      client:document.getElementById("r-client").value.trim(),
+      category:document.getElementById("r-cat").value,
+      montant:Number(document.getElementById("r-montant").value)||0,
+      mode:document.getElementById("r-mode").value,statut:d.statut,
+      note:document.getElementById("r-note").value.trim()};
+    if(!rec.client||!rec.date||rec.montant<=0){alert("Renseignez au moins le client, la date et un montant supérieur à 0.");return;}
+    if(!rec.id) rec.id=uid();
+    var btn=document.getElementById("r-save"); btn.disabled=true; btn.textContent="Enregistrement…";
+    function commit(){
+      return sbUpsertRecette(rec).then(function(r){
+        if(r.error){btn.disabled=false;btn.textContent=editing?"Enregistrer les modifications":"Enregistrer la recette";return;}
+        if(editing){S.recettes=S.recettes.map(function(x){return x.id===rec.id?rec:x;});}
+        else{S.recettes.unshift(rec);}
+        S.recEditId=null; go("recettes");
+      });
+    }
+    var oldId=(editing&&editing.attach)?editing.attach.id:null;
+    var ops=Promise.resolve();
+    if(attach===null){rec.attach=null; if(oldId)ops=attRemove(oldId);}
+    else if(newFileData){rec.attach={id:attach.id,name:attach.name,type:attach.type};
+      ops=attUpload(attach.id,newFileData,attach.type).then(function(){if(oldId&&oldId!==attach.id)return attRemove(oldId);});}
+    else{rec.attach=attach;}
+    ops.then(commit).catch(function(err){console.error(err);
+      alert("La recette n’a pas pu être enregistrée (pièce jointe). "+(err&&err.message?err.message:""));
+      btn.disabled=false; btn.textContent=editing?"Enregistrer les modifications":"Enregistrer la recette";});
+  };
+}
+
 function exportCSV(rows){
   if(!rows.length){alert("Aucune écriture à exporter.");return;}
   var head=["Date","Type","Pièce","Tiers","Catégorie","Mode","HT","TVA","CSS","TTC","Statut","Note"];
@@ -724,7 +937,9 @@ function renderParams(v){
     rows.map(function(r){return field(r[1],'<input data-k="'+r[0]+'" value="'+esc(s[r[0]]||"")+'">');}).join("")+
     '</div><p class="saved">✓ Enregistré automatiquement</p></div>'+
     '<div class="card form"><h3>Catégories de dépenses</h3><div class="cats" id="p-cats"></div>'+
-    '<div class="addcat"><input id="p-newcat" placeholder="Nouvelle catégorie"><button class="btn-ghost" id="p-addcat">Ajouter</button></div></div></div>';
+    '<div class="addcat"><input id="p-newcat" placeholder="Nouvelle catégorie"><button class="btn-ghost" id="p-addcat">Ajouter</button></div></div>'+
+    '<div class="card form"><h3>Catégories de recettes</h3><div class="cats" id="p-reccats"></div>'+
+    '<div class="addcat"><input id="p-newreccat" placeholder="Nouvelle catégorie de recette"><button class="btn-ghost" id="p-addreccat">Ajouter</button></div></div></div>';
   v.innerHTML=html;
 
   v.querySelectorAll("[data-k]").forEach(function(inp){inp.addEventListener("input",function(){
@@ -744,6 +959,19 @@ function renderParams(v){
     document.getElementById("p-newcat").value="";}
   document.getElementById("p-addcat").onclick=add;
   document.getElementById("p-newcat").addEventListener("keydown",function(e){if(e.key==="Enter")add();});
+
+  function drawRecCats(){
+    var box=document.getElementById("p-reccats");
+    box.innerHTML=S.recCategories.map(function(c){return '<span class="cat-chip">'+esc(c)+'<button data-rc="'+esc(c)+'">×</button></span>';}).join("");
+    box.querySelectorAll("[data-rc]").forEach(function(b){b.onclick=function(){
+      S.recCategories=S.recCategories.filter(function(x){return x!==b.getAttribute("data-rc");});persistRecCats();drawRecCats();};});
+  }
+  drawRecCats();
+  function addRec(){var val=document.getElementById("p-newreccat").value.trim();
+    if(val&&S.recCategories.indexOf(val)<0){S.recCategories.push(val);persistRecCats();drawRecCats();}
+    document.getElementById("p-newreccat").value="";}
+  document.getElementById("p-addreccat").onclick=addRec;
+  document.getElementById("p-newreccat").addEventListener("keydown",function(e){if(e.key==="Enter")addRec();});
 }
 
 /* ---------- Authentification & démarrage ---------- */
